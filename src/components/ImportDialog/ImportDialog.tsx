@@ -1,11 +1,9 @@
 import * as React from 'react';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { TranslationContext } from '../../context/TranslationContext';
 import { MuiChipsInput } from 'mui-chips-input';
@@ -14,6 +12,8 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
+import { jsonrepair } from 'jsonrepair'
+import { Typography } from '@mui/material';
 
 interface ImportDialogProps {
   open: boolean;
@@ -27,7 +27,13 @@ type ParsedFileData =
 
 export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
 
-  const { setSourceLanguage, setTargetLanguages, setTranslationFile, setSelectedNamespace } = React.useContext(TranslationContext);
+  const { 
+    setSourceLanguage, 
+    setTargetLanguages,
+    setTranslationFile, 
+    setSelectedNamespace,
+    setSelectedTargetLanguage,
+  } = React.useContext(TranslationContext);
   const [_sourceLanguage, _setSourceLanguage] = React.useState<string>('');
   const [_targetLanguages, _setTargetLanguages] = React.useState<string[]>([]);
   const [parsedFileData, setParsedFileData] = React.useState<ParsedFileData>(null);
@@ -61,11 +67,11 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
   }
 
   const parseSomehow = (json: string) => {
-    try {
-      return eval(json);
-    } catch (error) {
-      return JSON.parse(json);
-    }
+    const regex = /.*?(?<obj>{(.|\n)*})/gm;
+    const match = regex.exec(json)?.groups?.obj;
+    if(!match) throw new Error('Could not parse file');
+    const repaired = jsonrepair(match);
+    return JSON.parse(repaired);
   }
 
   const importFile = () => {
@@ -73,10 +79,14 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
     setSourceLanguage(_sourceLanguage);
     setTargetLanguages(_targetLanguages);
     const mergedFile = { ...parsedFileData.file };
+    _targetLanguages.forEach(tl => {
+      if(!mergedFile[tl]) mergedFile[tl] = {};
+    });
     mergeTranslations(mergedFile[_sourceLanguage], _targetLanguages.map(tl => mergedFile[tl]));
     setTranslationFile(mergedFile);
     setSourceLanguage(_sourceLanguage);
     setTargetLanguages(_targetLanguages);
+    setSelectedTargetLanguage(_targetLanguages[0]);
     setSelectedNamespace(parsedFileData.firstNamespace);
     handleClose();
   }
@@ -87,7 +97,7 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
         if(!target[key]) target[key] = typeof source[key] == 'string' ? '' : {};
         if(typeof source[key] == 'object') {
           // @ts-ignore
-          mergeTranslations(source[key], targets.map(t => t[key]));
+          mergeTranslations(source[key], [target[key]]);
         }
       });
     });
@@ -110,15 +120,19 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
           autoComplete="off"
         >
           <div>
-            <Button variant="contained" component="label" sx={{ mb: 2 }}>
+            <Button variant="contained" component="label">
               {parsedFileData?.status == 'success' ? parsedFileData.filename : 'Select File' }
               <input type="file" hidden onChange={e=> parseFile(e.target.files?.[0])} />
             </Button>
           </div>
+          {parsedFileData?.status == 'error' && (
+            <Typography color="error" sx={{ mt: 1 }}>Could not parse file</Typography>
+          )}
           <div>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Source language</InputLabel>
               <Select
+                disabled={!parsedFileData || parsedFileData.status !== 'success'}
                 value={_sourceLanguage}
                 label="Source language"
                 onChange={(e) => _setSourceLanguage(e.target.value as string)}
@@ -131,6 +145,7 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
           </div>
           <div>
             <MuiChipsInput 
+              disabled={!parsedFileData || parsedFileData.status !== 'success'}
               value={_targetLanguages} 
               onChange={_setTargetLanguages} 
               fullWidth
