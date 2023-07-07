@@ -5,6 +5,7 @@ import { TranslationContext } from '../../context/TranslationContext';
 import { LanguageCode } from '../../lib/types';
 import { accessTanslations } from '../../lib/utils';
 import { TranslateString } from '../TranslateString/TranslateString';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 interface Stats {
   total: number;
@@ -59,17 +60,30 @@ export const TranslateAccordion = ({ translationPath, onStats }: TranslateAccord
     onStats?.(stats);
   }, [stats]);
 
+  React.useEffect(() => {
+    return () => {
+      onStats?.({ total: 0, translated: 0, untranslated: 0 });
+    }
+  }, []);
+
+  const summaryProps = React.useMemo(() => {
+    if (translationPath !== '') {
+      return { sx: { background: '#eee' }, expandIcon: <ExpandMoreIcon /> };
+    }
+    return {};
+  }, [translationPath]);
+
   return (
     <Accordion defaultExpanded={true} expanded={translationPath == '' || undefined}>
-      <AccordionSummary>
-        <Typography fontWeight={500}>{translationPath || 'Translations'}</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Box sx={{ mb: 2 }}>
+      <AccordionSummary {...summaryProps}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography fontWeight={500}>{translationPath || 'Translations'}</Typography>
           <Typography fontSize={12}>
-            {stats.total} translations | {stats.translated} translated | {stats.untranslated} untranslated
+            {stats.total} translations
           </Typography>
         </Box>
+      </AccordionSummary>
+      <AccordionDetails>
         {strings.map(key => (
           <TranslateString 
             key={key} 
@@ -80,8 +94,8 @@ export const TranslateAccordion = ({ translationPath, onStats }: TranslateAccord
         {nests.map(nest => (
           <TranslateAccordion 
             key={nest} 
-            translationPath={`${translationPath}.${nest}`}
-            onStats={(stats) => setNestedStats({ ...nestedStats, [nest]: stats })} />
+            translationPath={translationPath === '' ? nest : `${translationPath}.${nest}`}
+            onStats={(stats) => setNestedStats((nestedStats) => ({ ...nestedStats, [nest]: stats }))} />
         ))}
       </AccordionDetails>
     </Accordion>

@@ -7,38 +7,7 @@ import { LanguageCode, TranslationFile } from './lib/types';
 
 function App() {
   const [sourceLanguage, setSourceLanguage] = React.useState<LanguageCode>('en');
-  const [translationFile, setTranslationFile] = React.useState<TranslationFile>({
-    en: {
-      common: {
-        hello: 'Hello everyone!',
-        world: 'World',
-        nested_a: {
-          nested_b: {
-            test: 'Test',
-            test2: 'Test',
-            nested_c: {
-              test3: '',
-            }
-          },
-        },
-      },
-    },
-    ro: {
-      common: {
-        hello: 'buna ziua tuturor!',
-        world: '',
-        nested_a: {
-          nested_b: {
-            test: '',
-            test2: '',
-            nested_c: {
-              test3: 'aaa',
-            }
-          },
-        },
-      },
-    },
-  });
+  const [translationFile, setTranslationFile] = React.useState<TranslationFile>({});
   const [targetLanguages, setTargetLanguages] = React.useState<LanguageCode[]>([]);
   const [selectedTargetLanguage, setSelectedTargetLanguage] = React.useState<LanguageCode>('ro');
   const [selectedNamespace, setSelectedNamespace] = React.useState<string>('common');
