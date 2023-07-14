@@ -4,7 +4,7 @@ import { TextField, Typography, Box, IconButton, CircularProgress } from '@mui/m
 import { Translate as TranslateIcon } from '@mui/icons-material';
 import { accessTanslations } from '../../lib/utils';
 import { TranslationContext } from '../../context/TranslationContext';
-import { debounce, set } from 'lodash';
+import { debounce } from 'lodash';
 import { translateText } from '../../lib/translate';
 import { useSnackbar } from 'notistack';
 

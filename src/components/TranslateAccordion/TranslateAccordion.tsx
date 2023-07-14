@@ -54,7 +54,7 @@ export const TranslateAccordion = ({ translationPath, onStats }: TranslateAccord
     const translated = strings.filter(key => targetTranslationObject[key] !== '').length + nestedStatsTotal.translated;
     const untranslated = total - translated;
     return { total, translated, untranslated };
-  }, [strings, nestedStatsTotal, targetTranslationObject]);
+  }, [strings, nestedStatsTotal, targetTranslationObject, translationFile]);
 
   React.useEffect(() => {
     onStats?.(stats);
@@ -79,7 +79,7 @@ export const TranslateAccordion = ({ translationPath, onStats }: TranslateAccord
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
           <Typography fontWeight={500}>{translationPath || 'Translations'}</Typography>
           <Typography fontSize={12}>
-            {stats.total} translations
+            {stats.total} translations | {stats.translated} translated | {stats.untranslated} untranslated
           </Typography>
         </Box>
       </AccordionSummary>
