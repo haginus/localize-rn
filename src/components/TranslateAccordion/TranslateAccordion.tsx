@@ -38,8 +38,8 @@ export const TranslateAccordion = ({ translationPath, onStats }: TranslateAccord
   ), [sourceTranslationObject]);
 
   const strings = React.useMemo(() => (
-    Object.keys(sourceTranslationObject).filter(key => typeof sourceTranslationObject[key] === 'string')
-  ), [sourceTranslationObject]);
+    Object.keys(targetTranslationObject).filter(key => typeof targetTranslationObject[key] === 'string')
+  ), [targetTranslationObject]);
 
   const nestedStatsTotal = React.useMemo(() => {
     return Object.values(nestedStats).reduce<Stats>((acc, stats) => ({

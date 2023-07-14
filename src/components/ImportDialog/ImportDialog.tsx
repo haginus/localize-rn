@@ -7,13 +7,14 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import { TranslationContext } from '../../context/TranslationContext';
 import { MuiChipsInput } from 'mui-chips-input';
-import { TranslationFile, Translations } from '../../lib/types';
+import { LanguageCode, TranslationFile, Translations } from '../../lib/types';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import { jsonrepair } from 'jsonrepair'
 import { Typography } from '@mui/material';
+import i18n from '../../lib/i18n';
 
 interface ImportDialogProps {
   open: boolean;
@@ -78,11 +79,7 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
     if(parsedFileData?.status !== 'success') return;
     setSourceLanguage(_sourceLanguage);
     setTargetLanguages(_targetLanguages);
-    const mergedFile = { ...parsedFileData.file };
-    _targetLanguages.forEach(tl => {
-      if(!mergedFile[tl]) mergedFile[tl] = {};
-    });
-    mergeTranslations(mergedFile[_sourceLanguage], _targetLanguages.map(tl => mergedFile[tl]));
+    const mergedFile = mergeTranslations(parsedFileData.file, _sourceLanguage, _targetLanguages);
     setTranslationFile(mergedFile);
     setSourceLanguage(_sourceLanguage);
     setTargetLanguages(_targetLanguages);
@@ -91,16 +88,57 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
     handleClose();
   }
 
-  const mergeTranslations = (source: Translations, targets: Translations[]) => {
-    Object.keys(source).forEach(key => {
-      targets.forEach(target => {
-        if(!target[key]) target[key] = typeof source[key] == 'string' ? '' : {};
-        if(typeof source[key] == 'object') {
-          // @ts-ignore
-          mergeTranslations(source[key], [target[key]]);
+  const mergeTranslations = (file: TranslationFile, sourceCode: LanguageCode, targetCodes: LanguageCode[]) => {
+
+    function getKeysMetadata(source: Translations, pluralSuffixes: string[]) {
+      return Object.keys(source).map(key => {
+        const pluralKeyIndex = pluralSuffixes.findIndex(suffix => key.endsWith(suffix));
+        const isPlural = pluralKeyIndex !== -1;
+        const keyWithoutPluralSuffix = isPlural ? key.slice(0, -pluralSuffixes[pluralKeyIndex].length) : key;
+        return { originalKey: key, isPlural, keyWithoutPluralSuffix };
+      });
+    }
+    function mergeTarget(source: Translations, target: Translations, options: MergeTargetOptions) {
+      const sourceKeysMetadata = getKeysMetadata(source, options.sourcePluralSuffixes);
+      const uniqueSourceKeys = sourceKeysMetadata.reduce((acc, keyMeta) => {
+        acc[keyMeta.keyWithoutPluralSuffix] = keyMeta;
+        return acc;
+      }, {} as Record<string, typeof sourceKeysMetadata[number]>);
+      Object.entries(uniqueSourceKeys).forEach(([key, metadata]) => {
+        if(metadata.isPlural) {
+          options.targetPluralSuffixes.forEach(suffix => {
+            const targetKey = key + suffix;
+            if(!target[targetKey]) target[targetKey] = '';
+          });
+        } else {
+          if(!target[key]) target[key] = typeof source[key] == 'string' ? '' : {};
+          if(typeof source[key] == 'object') {
+            mergeTarget(source[key] as any, target[key] as any, options);
+          }
         }
       });
+      // Remove dangling keys
+      const targetKeysMetadata = getKeysMetadata(target, options.targetPluralSuffixes);
+      targetKeysMetadata.forEach(keyMeta => {
+        if(!uniqueSourceKeys[keyMeta.keyWithoutPluralSuffix]) {
+          delete target[keyMeta.originalKey];
+        }
+        if(uniqueSourceKeys[keyMeta.keyWithoutPluralSuffix]?.isPlural && keyMeta.originalKey == keyMeta.keyWithoutPluralSuffix) {
+          delete target[keyMeta.originalKey];
+        }
+      });
+    }
+    const mergedFile = { ...file };
+    targetCodes.forEach(tl => {
+      if(!mergedFile[tl]) mergedFile[tl] = {};
     });
+    const sourcePluralSuffixes = i18n.services.pluralResolver.getSuffixes(sourceCode);
+    targetCodes.forEach(targetCode => {
+      const targetPluralSuffixes = i18n.services.pluralResolver.getSuffixes(targetCode);
+      mergeTarget(mergedFile[sourceCode], mergedFile[targetCode], { sourcePluralSuffixes, targetPluralSuffixes });
+    });
+    console.log(mergedFile)
+    return mergedFile;
   }
 
   const canImport = React.useMemo(() => {
@@ -162,4 +200,9 @@ export default function ImportDialog({ open, setOpen }: ImportDialogProps) {
       </DialogActions>
     </Dialog>
   );
+}
+
+interface MergeTargetOptions {
+  sourcePluralSuffixes: string[];
+  targetPluralSuffixes: string[];
 }

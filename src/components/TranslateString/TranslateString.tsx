@@ -46,8 +46,10 @@ export const TranslateString = ({ translationPath, sourceTranslation, targetTran
         }}
         helperText={(
           <Typography component={'span'}>
-            <Typography variant='caption' component='span' fontWeight={500}>Source:</Typography>
-            <Typography variant='caption' component='span'> {sourceTranslation}</Typography>
+            <Typography variant='caption' component='span' fontWeight={500}>Source: </Typography>
+            <Typography variant='caption' component='span' sx={{ fontStyle: !!sourceTranslation ? 'initial' : 'italic' }}>
+              {sourceTranslation || 'No source translation.'}
+            </Typography>
           </Typography>
         )} />
     </Box>
