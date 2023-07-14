@@ -3,7 +3,7 @@ import './HeaderBar.scoped.scss';
 import { AppBar, Toolbar, Button, Typography, IconButton } from '@mui/material';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 import ImportDialog from '../ImportDialog/ImportDialog';
-import ExportDialog from '../ImportDialog/ExportDialog';
+import ExportDialog from '../ExportDialog/ExportDialog';
 import SettingsDialog from '../SettingsDialog/SettingsDialog';
 
 export const HeaderBar = () => {
