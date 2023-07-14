@@ -15,4 +15,6 @@ export interface ITranslationContext {
   setSelectedTargetLanguage: (language: LanguageCode) => void;
   selectedNamespace: string;
   setSelectedNamespace: (namespace: string) => void;
+  translateApiKey: string;
+  setTranslateApiKey: (apiKey: string) => void;
 }

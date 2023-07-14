@@ -1,9 +1,12 @@
 import React from 'react';
 import './TranslateString.scoped.scss';
-import { TextField, Typography, Box } from '@mui/material';
+import { TextField, Typography, Box, IconButton, CircularProgress } from '@mui/material';
+import { Translate as TranslateIcon } from '@mui/icons-material';
 import { accessTanslations } from '../../lib/utils';
 import { TranslationContext } from '../../context/TranslationContext';
 import { debounce, set } from 'lodash';
+import { translateText } from '../../lib/translate';
+import { useSnackbar } from 'notistack';
 
 interface TranslateStringProps {
   translationPath: string;
@@ -12,7 +15,8 @@ interface TranslateStringProps {
 }
 
 export const TranslateString = ({ translationPath, sourceTranslation, targetTranslation }: TranslateStringProps) => {
-  const { selectedNamespace, translationFile, selectedTargetLanguage, setTranslationFile } = React.useContext(TranslationContext);
+  const { enqueueSnackbar } = useSnackbar();
+  const { selectedNamespace, translationFile, selectedTargetLanguage, setTranslationFile, translateApiKey, sourceLanguage } = React.useContext(TranslationContext);
   const stringName = React.useMemo(() => translationPath.split('.').pop()!, [translationPath]);
 
   const onChange = React.useCallback((value: string) => {
@@ -25,12 +29,30 @@ export const TranslateString = ({ translationPath, sourceTranslation, targetTran
 
 
   const [value, setValue] = React.useState<string>(targetTranslation || '');
+  const [loading, setLoading] = React.useState<boolean>(false);
 
   const debouncedOnChange = React.useMemo(() => debounce(onChange, 500), [onChange]);
 
   React.useEffect(() => {
     setValue(targetTranslation || '');
   }, [selectedTargetLanguage, selectedNamespace]);
+
+  const canAutoTranslate = React.useMemo(() => {
+    return !!sourceTranslation && !!selectedTargetLanguage && !!translateApiKey;
+  }, [sourceTranslation, selectedTargetLanguage, translateApiKey]);
+
+  const autoTranslate = async () => {
+    try {
+      setLoading(true);
+      const translatedText = await translateText(sourceTranslation!, sourceLanguage, selectedTargetLanguage, translateApiKey);
+      setValue(translatedText);
+      onChange(translatedText);
+    } catch (error) {
+      enqueueSnackbar(`${error}`, { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  } 
 
   return (
     <Box sx={{ mb: 2 }}>
@@ -39,10 +61,19 @@ export const TranslateString = ({ translationPath, sourceTranslation, targetTran
         variant='outlined' 
         fullWidth
         value={value}
-        inputProps={!value ? { style: { backgroundColor: '#FFF176' }} : undefined}
+        className={!value ? 'highlight' : undefined}
         onChange={(event) => {
           setValue(event.target.value);
           debouncedOnChange(event.target.value);
+        }}
+        InputProps={{
+          endAdornment: loading ? (
+            <CircularProgress />
+          ) : canAutoTranslate ? (
+            <IconButton onClick={autoTranslate}>
+              <TranslateIcon />
+            </IconButton>
+          ) : undefined,
         }}
         helperText={(
           <Typography component={'span'}>
